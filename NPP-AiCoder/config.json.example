@@ -1,0 +1,7 @@
+{
+    "base_url": "cloud.infini-ai.com",
+    "api_key": "Bearer sk-XXXXXX",
+    "model_name": "deepseek-r1-distill-qwen-32b",
+    "generate_endpoint": "/maas/v1/completions",
+    "chat_endpoint": "/maas/v1/chat/completions"
+}
