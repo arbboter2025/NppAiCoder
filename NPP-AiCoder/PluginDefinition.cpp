@@ -95,8 +95,21 @@ void commandMenuInit()
     //            ShortcutKey *shortcut,          // optional. Define a shortcut to trigger this command
     //            bool check0nInit                // optional. Make this menu item be checked visually
     //            );
+
+    // 初始化快捷键
+    auto pShortcutKeys = new ShortcutKey[nbFunc];
+    memset(pShortcutKeys, 0, sizeof(ShortcutKey) * nbFunc);
+    ShortcutKey& key = pShortcutKeys[0];
+
+
     setCommand(0, L"About AiCoder", HelloAiCoder, NULL, false);
-    setCommand(1, L"选中内容问AI", AskBySelectedText, NULL, false);
+
+    key = pShortcutKeys[1];
+    key._isCtrl = true;
+    key._isAlt = true;
+    key._isShift = false;
+    key._key = VK_F2;
+    setCommand(1, L"选中内容问AI", AskBySelectedText, &key, false);
 }
 
 //
@@ -179,9 +192,12 @@ void AiRequest(const std::string& question)
         // 光标强制可见，自动滚动效果
         call.ScrollCaret();
     };
+
     // 创建并启动打字机
     Scintilla::Typewriter writer(fnGet, fnSet);
+    fnSet("\r\n\r\n");
     writer.Run();
+    fnSet("\r\n\r\n");
 }
 
 //----------------------------------------------//
