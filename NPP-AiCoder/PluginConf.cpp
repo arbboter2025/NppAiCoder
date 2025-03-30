@@ -1,6 +1,5 @@
 #include "pch.h"
 #include "PluginConf.h"
-#include "json.hpp"
 
 template<typename T>
 bool JsonGet(const nlohmann::json& jdat, const std::string& name, T& val)

@@ -67,6 +67,10 @@ void pluginInit(HANDLE hModule)
 
         // 读取配置
         std::string strConf;
+        Scintilla::PluginConfig conf;
+        conf.Load(strConfigFile.c_str());
+
+
         Scintilla::File::ReadFile(strConfigFile, strConf);
         g_PlatformConf.Load(strConf);
     }
@@ -104,6 +108,7 @@ void commandMenuInit()
 
     setCommand(0, L"About AiCoder", HelloAiCoder, NULL, false);
 
+    // 初始化快捷键为Ctrl+F2
     key = pShortcutKeys[1];
     key._isCtrl = true;
     key._isAlt = true;

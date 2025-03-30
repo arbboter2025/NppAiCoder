@@ -51,6 +51,12 @@
     <ClInclude Include="PluginConf.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="AiModel.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="NppImp.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -69,6 +75,12 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="PluginConf.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="AiModel.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="NppImp.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
