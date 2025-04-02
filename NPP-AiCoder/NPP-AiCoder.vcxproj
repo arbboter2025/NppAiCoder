@@ -29,28 +29,28 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -76,7 +76,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <TargetName>AiCoder</TargetName>
-    <OutDir>C:\Program Files\Notepad++\plugins\AiCoder\</OutDir>
+    <OutDir>$(ProgramW6432)\Notepad++\plugins\AiCoder\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <TargetName>AiCoder</TargetName>
@@ -84,7 +84,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <TargetName>AiCoder</TargetName>
-    <OutDir>C:\Program Files\Notepad++\plugins\AiCoder\</OutDir>
+    <OutDir>$(ProgramW6432)\Notepad++\plugins\AiCoder\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -130,9 +130,9 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;NPPAICODER_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(ProjectDir)include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)include;$(ProjectDir)include\notepad++;$(ProjectDir)include\notepad++\DockWnd</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
@@ -149,9 +149,9 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;NPPAICODER_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(ProjectDir)include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)include;$(ProjectDir)include\notepad++;$(ProjectDir)include\notepad++\DockWnd</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
@@ -163,23 +163,48 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="AiAssistWnd.h" />
     <ClInclude Include="AiModel.h" />
     <ClInclude Include="framework.h" />
-    <ClInclude Include="menuCmdID.h" />
-    <ClInclude Include="Notepad_plus_msgs.h" />
+    <ClInclude Include="include\json.hpp" />
+    <ClInclude Include="include\notepad++\Docking.h" />
+    <ClInclude Include="include\notepad++\DockingFeature\dockingResource.h" />
+    <ClInclude Include="include\notepad++\DockWnd\Common.h" />
+    <ClInclude Include="include\notepad++\DockWnd\Docking.h" />
+    <ClInclude Include="include\notepad++\DockWnd\DockingDlgInterface.h" />
+    <ClInclude Include="include\notepad++\DockWnd\dockingResource.h" />
+    <ClInclude Include="include\notepad++\DockWnd\dpiManagerV2.h" />
+    <ClInclude Include="include\notepad++\DockWnd\NppDarkMode.h" />
+    <ClInclude Include="include\notepad++\DockWnd\StaticDialog.h" />
+    <ClInclude Include="include\notepad++\DockWnd\Window.h" />
+    <ClInclude Include="include\notepad++\ILexer.h" />
+    <ClInclude Include="include\notepad++\ILoader.h" />
+    <ClInclude Include="include\notepad++\menuCmdID.h" />
+    <ClInclude Include="include\notepad++\Notepad_plus_msgs.h" />
+    <ClInclude Include="include\notepad++\Npp.h" />
+    <ClInclude Include="include\notepad++\PluginInterface.h" />
+    <ClInclude Include="include\notepad++\Scintilla.h" />
+    <ClInclude Include="include\notepad++\ScintillaCall.h" />
+    <ClInclude Include="include\notepad++\ScintillaMessages.h" />
+    <ClInclude Include="include\notepad++\ScintillaStructures.h" />
+    <ClInclude Include="include\notepad++\ScintillaTypes.h" />
+    <ClInclude Include="include\notepad++\ScintillaWidget.h" />
+    <ClInclude Include="include\notepad++\Sci_Position.h" />
     <ClInclude Include="NppImp.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="PluginConf.h" />
     <ClInclude Include="PluginDefinition.h" />
-    <ClInclude Include="PluginInterface.h" />
     <ClInclude Include="resource.h" />
-    <ClInclude Include="Scintilla.h" />
-    <ClInclude Include="Sci_Position.h" />
     <ClInclude Include="SimpleHttp.h" />
     <ClInclude Include="Utils.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="AiAssistWnd.cpp" />
     <ClCompile Include="AiModel.cpp" />
+    <ClCompile Include="include\notepad++\DockWnd\dpiManagerV2.cpp" />
+    <ClCompile Include="include\notepad++\DockWnd\NppDarkMode.cpp" />
+    <ClCompile Include="include\notepad++\DockWnd\StaticDialog.cpp" />
+    <ClCompile Include="include\notepad++\ScintillaCall.cpp" />
     <ClCompile Include="NppImp.cpp" />
     <ClCompile Include="NppPlugin.cpp" />
     <ClCompile Include="pch.cpp">
@@ -190,7 +215,6 @@
     </ClCompile>
     <ClCompile Include="PluginConf.cpp" />
     <ClCompile Include="PluginDefinition.cpp" />
-    <ClCompile Include="ScintillaCall.cpp" />
     <ClCompile Include="Utils.cpp" />
   </ItemGroup>
   <ItemGroup>

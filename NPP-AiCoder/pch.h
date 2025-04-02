@@ -12,4 +12,11 @@
 #define NAMEPACE_BEG(x) namespace x {
 #define NAMEPACE_END }
 
+#define CHECK_OR_RETURN(A, ...) \
+            do { \
+                if (!(A)) { \
+                    return (##__VA_ARGS__); \
+                } \
+            } while (0)
+
 #endif //PCH_H

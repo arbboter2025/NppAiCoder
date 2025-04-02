@@ -75,6 +75,20 @@ public:
     int timeout = 180;
     std::map<std::string, PlatformConfig> platforms;
 
+    const PlatformConfig& Platform()
+    {
+        auto e = platforms.find(platform);
+        if (e != platforms.end())
+        {
+            return e->second;
+        }
+        if (platforms.empty())
+        {
+            throw std::runtime_error("平台列表为空，请配置插件平台");
+        }
+        return platforms.begin()->second;
+    }
+
     // 加载配置
     void Load(const std::string& filename) 
     {

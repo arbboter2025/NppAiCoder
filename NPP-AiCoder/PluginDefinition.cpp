@@ -18,15 +18,11 @@
 #include "PluginDefinition.h"
 #include "menuCmdID.h"
 
-#include "ScintillaTypes.h"
-#include "ScintillaStructures.h"
-#include "ScintillaMessages.h"
-#include "ScintillaCall.h"
-#include "Utils.h"
-
 #include "SimpleHttp.h"
 #include "json.hpp"
 #include "PluginConf.h"
+#include "AiAssistWnd.h"
+#include "NppImp.h"
 
 #include <shlwapi.h>
 #include <string>
@@ -46,7 +42,13 @@ FuncItem funcItem[nbFunc];
 //
 // The data of Notepad++ that you can use in your plugin commands
 //
-NppData nppData;
+HANDLE g_hModule = nullptr;
+NppData g_nppData;
+Scintilla::PluginConfig g_pluginConf;
+AiAssistWnd* g_pAiWnd = nullptr;
+NppImp* g_pNppImp = nullptr;
+ShortcutKey* g_pShortcutKeys = nullptr;
+
 Scintilla::PlatformConf g_PlatformConf;
 //
 // Initialize your plugin data here
@@ -55,6 +57,7 @@ void pluginInit(HANDLE hModule)
 {
     if (hModule != NULL)
     {
+        g_hModule = hModule;
         char szModulePath[MAX_PATH] = { 0 };
         ::GetModuleFileNameA((HMODULE)hModule, szModulePath, CARRAY_LEN(szModulePath));
 
@@ -67,12 +70,8 @@ void pluginInit(HANDLE hModule)
 
         // 读取配置
         std::string strConf;
-        Scintilla::PluginConfig conf;
-        conf.Load(strConfigFile.c_str());
-
-
         Scintilla::File::ReadFile(strConfigFile, strConf);
-        g_PlatformConf.Load(strConf);
+        g_pluginConf.Load(strConfigFile.c_str());
     }
 }
 
@@ -81,6 +80,9 @@ void pluginInit(HANDLE hModule)
 //
 void pluginCleanUp()
 {
+    if (g_pAiWnd) { delete g_pAiWnd; g_pAiWnd = nullptr; }
+    if (g_pNppImp) { delete g_pNppImp; g_pNppImp = nullptr; }
+    if (g_pShortcutKeys) { delete[] g_pShortcutKeys; g_pShortcutKeys = nullptr; }
 }
 
 //
@@ -100,21 +102,24 @@ void commandMenuInit()
     //            bool check0nInit                // optional. Make this menu item be checked visually
     //            );
 
-    // 初始化快捷键
-    auto pShortcutKeys = new ShortcutKey[nbFunc];
-    memset(pShortcutKeys, 0, sizeof(ShortcutKey) * nbFunc);
-    ShortcutKey& key = pShortcutKeys[0];
+    // 初始化数据
+    g_pNppImp = new NppImp(g_nppData);
 
-
-    setCommand(0, L"About AiCoder", HelloAiCoder, NULL, false);
-
-    // 初始化快捷键为Ctrl+F2
-    key = pShortcutKeys[1];
-    key._isCtrl = true;
-    key._isAlt = true;
-    key._isShift = false;
-    key._key = VK_F2;
-    setCommand(1, L"选中内容问AI", AskBySelectedText, &key, false);
+    // 初始化菜单
+    ShortcutKey* pSck = new ShortcutKey[nbFunc];
+    g_pShortcutKeys = pSck;
+    size_t nCid = 0;
+    setCommand(nCid, L"参数配置", PluginConfig, NULL, false); ++nCid;
+    pSck[nCid] = { false, true, false, 'K' };
+    setCommand(nCid, L"显示窗口", OpenAiAssistWnd, pSck + nCid, false); ++nCid;
+    pSck[nCid] = { false, true, false, 'J' };
+    setCommand(nCid, L"解读代码", ReadCode, pSck + nCid, false); ++nCid;
+    pSck[nCid] = { false, true, false, 'Y' };
+    setCommand(nCid, L"优化代码", OptimizeCode, pSck + nCid, false); ++nCid;
+    pSck[nCid] = { false, true, false, 'Z' };
+    setCommand(nCid, L"代码注释", AddCodeComment, pSck + nCid, false); ++nCid;
+    pSck[nCid] = { false, true, false, 'A' };
+    setCommand(nCid, L"选中即问", AskBySelectedText, pSck + nCid, false); ++nCid;
 }
 
 //
@@ -182,12 +187,12 @@ void AiRequest(const std::string& question)
      // 发送POST请求
     if (cli.Post(g_PlatformConf._chatEndpoint, prompt, resp, true))
     {
-        MessageBox(nppData._scintillaMainHandle, L"调用大模型失败", L"提示", MB_OK);
+        MessageBox(g_nppData._scintillaMainHandle, L"调用大模型失败", L"提示", MB_OK);
         return;
     }
 
     Scintilla::ScintillaCall call;
-    call.SetFnPtr((intptr_t)nppData._scintillaMainHandle);
+    call.SetFnPtr((intptr_t)g_nppData._scintillaMainHandle);
     
     // 设置打字机参数，读和写
     auto fnGet = std::bind(&SimpleHttp::TryFetchResp, &cli, std::placeholders::_1);
@@ -208,29 +213,56 @@ void AiRequest(const std::string& question)
 //----------------------------------------------//
 //-- STEP 4. DEFINE YOUR ASSOCIATED FUNCTIONS --//
 //----------------------------------------------//
-void HelloAiCoder()
+// 参数设置
+void PluginConfig()
 {
 
 }
 
+// 打开Ai助手窗口
+void OpenAiAssistWnd()
+{
+    // 初始化Dock窗口
+    if (g_pAiWnd == nullptr && g_hModule != nullptr && g_nppData._nppHandle != nullptr)
+    {
+        g_pAiWnd = new AiAssistWnd((HINSTANCE)g_hModule, g_nppData);
+        g_pAiWnd->init();
+        g_pAiWnd->updateModelList(g_pluginConf.Platform().models);
+    }
+    if (g_pAiWnd)
+    {
+        g_pAiWnd->display(true);
+    }
+}
 
+// 解读代码
+void ReadCode()
+{
+
+}
+
+// 代码优化
+void OptimizeCode()
+{
+
+}
+
+// 添加代码注释
+void AddCodeComment()
+{
+
+}
 
 void AskBySelectedText()
 {
-    // 获取当前文本内容
-    Scintilla::ScintillaCall call;
-    call.SetFnPtr((intptr_t)nppData._scintillaMainHandle);
-    auto text = call.GetSelText();
-    auto code_page = call.CodePage();
-    if (code_page > 0 && code_page != CP_ACP)
-    {
-        text = Scintilla::String::ConvEncoding(text.c_str(), text.size(), code_page, CP_ACP);
-    }
+    NppImp npp(g_nppData);
+    auto text = npp.GetSelText();
 
     // 设置输出位置，选中部分尾部新建一行
-    auto pEnd = call.SelectionEnd();
-    call.ClearSelections();
-    call.GotoPos(pEnd + 1);
+    auto pCall = npp.SciCall();
+    auto pEnd = pCall->SelectionEnd();
+    pCall->ClearSelections();
+    pCall->GotoPos(pEnd + 1);
 
     // 创建并启动子线程
     std::shared_ptr<char[]> pText(new char[text.size()]);
