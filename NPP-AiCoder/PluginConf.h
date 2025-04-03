@@ -1,40 +1,60 @@
+#pragma once
 #include "pch.h"
-#include "json.hpp"
+#include "Utils.h"
 #include <fstream>
 NAMEPACE_BEG(Scintilla)
 
-class PlatformConf
+class IConfig
 {
 public:
-    // 基础功能字段
-    std::string _baseUrl;
-    std::string _apiSkey;
-    std::string _modelName;
-    std::string _generateEndpoint;
-    std::string _chatEndpoint;
+    virtual void from_json(const nlohmann::json& j) = 0;
+    virtual void to_json(nlohmann::json& j) = 0;
+};
 
-    // 从json字符串读取配置内容
-    bool Load(const std::string& sdat);
+// 提示词
+struct PromtConfig : public IConfig
+{
+    std::string read_code;
+    std::string optimize_code;
+    std::string add_comment;
+
+    void SetDefault();
+
+    virtual void from_json(const nlohmann::json& j) override
+    {
+        Util::JsonGet(j, "read_code", read_code);
+        Util::JsonGet(j, "optimize_code", optimize_code);
+        Util::JsonGet(j, "add_comment", add_comment);
+    }
+    virtual void to_json(nlohmann::json& j) override
+    {
+
+    }
 };
 
 // 端点配置结构体
-struct EndpointConfig 
+struct EndpointConfig : public IConfig
 {
     std::string method = "post";
     std::string api;
     std::string prompt;
 
-    EndpointConfig() = default;
-    explicit EndpointConfig(const nlohmann::json& j) 
+    virtual void from_json(const nlohmann::json& j) override
     {
-        method = j.value("method", "post");
-        api = j.value("api", "");
-        prompt = j["prompt"].is_string() ? j["prompt"] : "";
+        Util::JsonGet(j, "method", method);
+        Util::JsonGet(j, "api", api);
+        Util::JsonGet(j, "prompt", prompt);
+    }
+    virtual void to_json(nlohmann::json& j) override
+    {
+
     }
 };
 
 // 平台配置结构体
-struct PlatformConfig {
+struct PlatformConfig : public IConfig
+{
+    bool enable_ssl;
     std::string base_url;
     std::string api_key;
     std::string model_name;
@@ -43,26 +63,29 @@ struct PlatformConfig {
     EndpointConfig models_endpoint;
     std::vector<std::string> models;
 
-    PlatformConfig() = default;
-    explicit PlatformConfig(const nlohmann::json& j) 
+    virtual void from_json(const nlohmann::json& j) override
     {
-        base_url = j.value("base_url", "");
-        api_key = j["api_key"].is_string() ? j["api_key"] : "";
-        model_name = j.value("model_name", "");
+        Util::JsonGet(j, "enable_ssl", enable_ssl);
+        Util::JsonGet(j, "base_url", base_url);
+        Util::JsonGet(j, "api_key", api_key);
+        Util::JsonGet(j, "model_name", model_name);
+        if (j.contains("generate_endpoint") && j["generate_endpoint"].is_object())
+        {
+            generate_endpoint.from_json(j["generate_endpoint"]);
+        }
+        if (j.contains("chat_endpoint") && j["chat_endpoint"].is_object())
+        {
+            chat_endpoint.from_json(j["chat_endpoint"]);
+        }
+        if (j.contains("models_endpoint") && j["models_endpoint"].is_object())
+        {
+            models_endpoint.from_json(j["models_endpoint"]);
+        }
+        Util::JsonGet(j, "models", models);
+    }
+    virtual void to_json(nlohmann::json& j) override
+    {
 
-        if (j.contains("generate_endpoint")) 
-        {
-            generate_endpoint = EndpointConfig(j["generate_endpoint"]);
-        }
-        if (j.contains("chat_endpoint")) 
-        {
-            chat_endpoint = EndpointConfig(j["chat_endpoint"]);
-        }
-        if (j.contains("models_endpoint")) 
-        {
-            models_endpoint = EndpointConfig(j["models_endpoint"]);
-        }
-        models = j.value("models", std::vector<std::string>());
     }
 };
 
@@ -73,9 +96,10 @@ public:
     // 公共配置项
     std::string platform;
     int timeout = 180;
+    PromtConfig promt;
     std::map<std::string, PlatformConfig> platforms;
 
-    const PlatformConfig& Platform()
+    const PlatformConfig& Platform() const
     {
         auto e = platforms.find(platform);
         if (e != platforms.end())
@@ -90,74 +114,36 @@ public:
     }
 
     // 加载配置
-    void Load(const std::string& filename) 
-    {
-        try 
-        {
-            std::ifstream file(filename);
-            nlohmann::json j;
-            file >> j;
-
-            // 解析基础配置
-            platform = j.value("platform", "");
-            timeout = j.value("timeout", 180);
-
-            // 解析平台配置
-            platforms.clear();
-            if (j.contains("platforms") && j["platforms"].is_object()) 
-            {
-                for (auto& [key, value] : j["platforms"].items()) 
-                {
-                    platforms.emplace(key, PlatformConfig(value));
-                }
-            }
-        }
-        catch (const std::exception& e) 
-        {
-            throw std::runtime_error("Load config failed: " + std::string(e.what()));
-        }
-    }
+    void Load(const std::string& filename);
 
     // 保存配置
-    void Save(const std::string& filename) 
-    {
-        nlohmann::json j;
-
-        // 基础配置
-        j["platform"] = platform;
-        j["timeout"] = timeout;
-
-        // 平台配置
-        nlohmann::json platforms_json;
-        for (auto& [name, config] : platforms) 
-        {
-            nlohmann::json platform_json;
-            platform_json["base_url"] = config.base_url;
-            platform_json["api_key"] = config.api_key.empty() ? nullptr : config.api_key;
-            platform_json["model_name"] = config.model_name;
-
-            platform_json["generate_endpoint"]["method"] = config.generate_endpoint.method;
-            platform_json["generate_endpoint"]["api"] = config.generate_endpoint.api;
-            platform_json["generate_endpoint"]["prompt"] = config.generate_endpoint.prompt.empty() ? nullptr : config.generate_endpoint.prompt;
-
-            platform_json["chat_endpoint"]["method"] = config.chat_endpoint.method;
-            platform_json["chat_endpoint"]["api"] = config.chat_endpoint.api;
-            platform_json["chat_endpoint"]["prompt"] = config.chat_endpoint.prompt.empty() ? nullptr : config.chat_endpoint.prompt;
-
-            platform_json["models_endpoint"]["method"] = config.models_endpoint.method;
-            platform_json["models_endpoint"]["api"] = config.models_endpoint.api;
-            platform_json["models_endpoint"]["prompt"] = config.models_endpoint.prompt.empty() ? nullptr : config.models_endpoint.prompt;
-
-            platform_json["models"] = config.models;
-
-            platforms_json[name] = platform_json;
-        }
-        j["platforms"] = platforms_json;
-
-        // 写入文件
-        std::ofstream file(filename);
-        file << j.dump(4);
-    }
+    void Save(const std::string& filename);
 };
 
 NAMEPACE_END
+
+
+namespace nlohmann
+{
+    template <>
+    struct adl_serializer<Scintilla::PromtConfig>
+    {
+        static void from_json(const json& j, Scintilla::PromtConfig& data)
+        {
+            j.at("read_code").get_to(data.read_code);
+            j.at("optimize_code").get_to(data.optimize_code);
+            j.at("add_comment").get_to(data.add_comment);
+        }
+    };
+
+    template <>
+    struct adl_serializer<Scintilla::EndpointConfig>
+    {
+        static void from_json(const json& j, Scintilla::EndpointConfig& data)
+        {
+            j.at("method").get_to(data.method);
+            j.at("api").get_to(data.api);
+            j.at("prompt").get_to(data.prompt);
+        }
+    };
+}

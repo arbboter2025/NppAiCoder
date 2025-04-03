@@ -24,7 +24,6 @@
 #include <shlwapi.h>
 #include "Common.h"
 #include "StaticDialog.h"
-#include "NppDarkMode.h"
 
 
 

@@ -269,7 +269,7 @@ void StaticDialog::create(int dialogID, bool isRTL, bool msgDestParent)
 		return;
 	}
 
-	NppDarkMode::setDarkTitleBar(_hSelf);
+	// NppDarkMode::setDarkTitleBar(_hSelf);
 	setDpi();
 
 	// if the destination of message NPPM_MODELESSDIALOG is not its parent, then it's the grand-parent
@@ -282,7 +282,7 @@ intptr_t CALLBACK StaticDialog::dlgProc(HWND hwnd, UINT message, WPARAM wParam, 
 	{
 		case WM_INITDIALOG:
 		{
-			NppDarkMode::setDarkTitleBar(hwnd);
+			// NppDarkMode::setDarkTitleBar(hwnd);
 
 			StaticDialog *pStaticDlg = reinterpret_cast<StaticDialog *>(lParam);
 			pStaticDlg->_hSelf = hwnd;

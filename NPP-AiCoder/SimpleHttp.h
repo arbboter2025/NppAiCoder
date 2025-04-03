@@ -13,7 +13,6 @@
 
 #pragma comment(lib, "winhttp.lib")
 
-
 /// <summary>
 /// 简单的HTTP类，自动支持http和https请求
 /// 也支持流式处理，此时结果先缓存到队列，需主动调用TryFetchResp去轮询结果
@@ -288,7 +287,7 @@ private:
                 static_cast<DWORD>(header.length()),
                 WINHTTP_ADDREQ_FLAG_COALESCE))
             {
-                //throw std::runtime_error("Failed to set header: " + h.first + " [Error: " + std::to_string(GetLastError()) + "]");
+                throw std::runtime_error("Failed to set header: " + h.first + " [Error: " + std::to_string(GetLastError()) + "]");
             }
         }
     }
@@ -329,66 +328,3 @@ private:
     std::atomic<bool> _streamActive{ false };
     std::thread _worker;
 };
-
-
-std::string ReplaceAll(std::string str, const std::string& from, const std::string& to) {
-    if (from.empty()) return str; // 避免死循环[[2]]
-
-    size_t pos = 0;
-    while ((pos = str.find(from, pos)) != std::string::npos)
-    {
-        str.replace(pos, from.length(), to);
-        pos += to.length();
-    }
-    return str;
-}
-
-std::string ExtractContent(std::string& resp) {
-    std::vector<std::string> results;
-    std::string key = "\"content\":";
-    size_t pos = 0;
-
-    while ((pos = resp.find(key, pos)) != std::string::npos)
-    {
-        pos += key.length();
-        // 跳过空白和冒号
-        while (pos < resp.size() && (resp[pos] == ' ' || resp[pos] == ':')) pos++;
-
-        if (resp[pos] != '"') continue; // 非字符串值跳过
-
-        std::string content;
-
-        // 处理转义字符和双引号
-        while (pos < resp.size())
-        {
-            char c = resp[pos++];
-            if (c == '"') break;
-            else if (c == '\\' && pos < resp.size())
-            {
-                switch (resp[pos++])
-                {
-                case 'n':
-                    c = '\n';
-                    break;
-                case '\r':
-                    c = '\r';
-                    break;
-                case '\\':
-                    c = '\\';
-                    break;
-                case '"':
-                    c = '\"';
-                    break;
-                default:
-                    pos--;
-                    break;
-                }
-            }
-            content += c;
-        }
-        resp = resp.substr(pos);
-        return content;
-    }
-    resp = "";
-    return resp;
-}

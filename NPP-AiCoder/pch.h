@@ -9,6 +9,7 @@
 
 // 添加要在此处预编译的标头
 #include "framework.h"
+#include <string>
 #define NAMEPACE_BEG(x) namespace x {
 #define NAMEPACE_END }
 
@@ -18,5 +19,15 @@
                     return (##__VA_ARGS__); \
                 } \
             } while (0)
+
+
+enum class AiRespType
+{
+    OPENAI_TOTAL_RESP,
+    OPENAI_STREAM_RESP,
+};
+
+
+void ShowMsgBox(const std::string& info, const std::string& title = "提示", UINT nFlag = MB_OK);
 
 #endif //PCH_H

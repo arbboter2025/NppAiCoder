@@ -1,34 +1,77 @@
 #pragma once
 #include "pch.h"
+#include "json.hpp"
 #include <Windows.h>
 #include <string>
+#include <fstream>
 #include <fstream>
 #include <functional>
 
 
 NAMEPACE_BEG(Scintilla)
 
-class File
+
+class Util
 {
 public:
-    static bool ReadFile(const std::string& filename, std::string& content) 
+    static std::shared_ptr<nlohmann::json> JsonLoadFile(const std::string& path);
+    static bool JsonLoad(const std::string& sdat, nlohmann::json& jdat);
+
+    template<typename T>
+    static bool JsonGet(const nlohmann::json& jdat, const std::string& name, T& val)
     {
-        // 以二进制模式打开文件（避免换行符转换）
-        std::ifstream file(filename, std::ios::binary);
-        if (!file.is_open()) 
+        // 使用contains检查键存在性（避免异常）
+        if (!jdat.contains(name))
         {
             return false;
         }
-
-        // 使用流迭代器读取整个文件内容
-        content.assign(
-            std::istreambuf_iterator<char>(file),
-            std::istreambuf_iterator<char>()
-        );
-
-        // 检查是否成功读取到文件末尾
-        return file.eof();
+        try 
+        {
+            val = jdat[name].get<T>();
+            return true;
+        }
+        catch (...) 
+        {
+            return false;
+        }
     }
+
+    template<typename T>
+    static bool JsonGetByPath(const nlohmann::json& jdat, const std::vector<std::string>& paths, T& val)
+    {
+        for(size_t i=0; i < paths.size(); i++)
+        {
+            auto& k = paths[i];
+            if (!jdat.contains(k) || jdat[k].is_null())
+            {
+                return false;
+            }
+            jdat = jdat[k];
+        }
+    }
+
+
+};
+
+class Json
+{
+public:
+    bool LoadFile(const std::string& path)
+    {
+        _pJson = Util::JsonLoadFile(path);
+        return _pJson != nullptr;
+    }
+
+    nlohmann::json& Inst() { return *_pJson; }
+
+private:
+    std::shared_ptr<nlohmann::json> _pJson = nullptr;
+};
+
+class File
+{
+public:
+    static bool ReadFile(const std::string& filename, std::string& content);
 };
 
 class String 
@@ -38,13 +81,6 @@ public:
     static std::string GBKToUTF8(const char* pSrc, size_t nLen = 0);
     static std::string UTF8ToGBK(const char* pSrc, size_t nLen = 0);
     static std::string Trim(const std::string& sin, const std::string& chars = " \r\n\t", bool left = true, bool right = true);
-};
-
-
-enum class AiRespType
-{
-    OPENAI_TOTAL_RESP,
-    OPENAI_STREAM_RESP,
 };
 
 
@@ -59,24 +95,7 @@ public:
     /// <param name="resp">首包内容</param>
     /// <param name="finished">是否结束</param>
     /// <returns></returns>
-    bool ExtractContent(AiRespType arType, std::string& resp, std::string& content, bool& finished)
-    {
-        bool bRet = false;
-
-        switch (arType) 
-        {
-        case AiRespType::OPENAI_TOTAL_RESP:
-            bRet = ParseTotalResponse(resp, content);
-            finished = true;
-            break;
-        case AiRespType::OPENAI_STREAM_RESP:
-            bRet = ParseStreamResponse(resp, content, finished);
-            break;
-        default:
-            break;
-        }
-        return bRet;
-    }
+    bool ExtractContent(AiRespType arType, std::string& resp, std::string& content, bool& finished);
 
 private:
     bool ParseTotalResponse(const std::string& jsonStr, std::string& content);
@@ -91,35 +110,7 @@ public:
     using FNWrite = std::function<void(const std::string&)>;
 
     Typewriter(FNRead getter, FNWrite setter) : m_getter(getter), m_writer(setter) {}
-
-    void Run()
-    {
-        ParseResult pr;
-        std::string text;
-        std::string last;
-        std::string content;
-        bool finished = false;
-        for(int nRet = 0; (nRet = m_getter(text)) != 0; )
-        {
-            if (text.empty())
-            {
-                continue;
-            }
-            text = last + text;
-            last = "";
-
-            while (!text.empty() && !finished)
-            {
-                if (!pr.ExtractContent(AiRespType::OPENAI_STREAM_RESP, text, content, finished))
-                {
-                    last = text;
-                    break;
-                }
-                m_writer(content);
-                Sleep(50);
-            }
-        }
-    }
+    void Run();
 
 private:
     FNRead m_getter;

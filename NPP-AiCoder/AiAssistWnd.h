@@ -10,7 +10,7 @@ public:
 
     // 必需实现的虚函数
     virtual void init();
-    virtual INT_PTR run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam);
+    virtual INT_PTR run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override;
 
     // 功能接口
     void updateModelList(const std::vector<std::string>& models);

@@ -23,6 +23,7 @@
 #include "PluginConf.h"
 #include "AiAssistWnd.h"
 #include "NppImp.h"
+#include "AiModel.h"
 
 #include <shlwapi.h>
 #include <string>
@@ -46,10 +47,10 @@ HANDLE g_hModule = nullptr;
 NppData g_nppData;
 Scintilla::PluginConfig g_pluginConf;
 AiAssistWnd* g_pAiWnd = nullptr;
+AiModel* g_pAiModel = nullptr;
 NppImp* g_pNppImp = nullptr;
 ShortcutKey* g_pShortcutKeys = nullptr;
 
-Scintilla::PlatformConf g_PlatformConf;
 //
 // Initialize your plugin data here
 // It will be called while plugin loading   
@@ -69,9 +70,7 @@ void pluginInit(HANDLE hModule)
         strConfigFile += "\\config.json";
 
         // 读取配置
-        std::string strConf;
-        Scintilla::File::ReadFile(strConfigFile, strConf);
-        g_pluginConf.Load(strConfigFile.c_str());
+        g_pluginConf.Load(strConfigFile);
     }
 }
 
@@ -80,6 +79,7 @@ void pluginInit(HANDLE hModule)
 //
 void pluginCleanUp()
 {
+    if (g_pAiModel) { delete g_pAiModel; g_pAiModel = nullptr; }
     if (g_pAiWnd) { delete g_pAiWnd; g_pAiWnd = nullptr; }
     if (g_pNppImp) { delete g_pNppImp; g_pNppImp = nullptr; }
     if (g_pShortcutKeys) { delete[] g_pShortcutKeys; g_pShortcutKeys = nullptr; }
@@ -104,6 +104,7 @@ void commandMenuInit()
 
     // 初始化数据
     g_pNppImp = new NppImp(g_nppData);
+    g_pAiModel = new AiModel(g_pluginConf, g_nppData);
 
     // 初始化菜单
     ShortcutKey* pSck = new ShortcutKey[nbFunc];
@@ -151,68 +152,15 @@ bool setCommand(size_t index, const TCHAR *cmdName, PFUNCPLUGINCMD pFunc, Shortc
 }
 
 
-std::string CreateJsonRequest(bool stream, const std::string& model, const std::string& content) 
-{
-    nlohmann::json req;
-    req["stream"] = stream;
-    req["model"] = model;
-
-    // 构建消息体（自动处理特殊字符转义）[[4]]
-    req["messages"] = nlohmann::json::array({
-        {
-            {"role", "user"},
-            {"content", content}
-        }
-        });
-    return req.dump(-1, ' ', false, nlohmann::json::error_handler_t::replace);
-}
-
-void AiRequest(const std::string& question)
-{
-    // 创建HTTPS客户端
-    SimpleHttp cli(g_PlatformConf._baseUrl, true);
-
-
-    // 设置默认头，字符编码使用UTF-8
-    cli.SetHeaders({
-        { "Content-Type", "application/json; charset=UTF-8" },
-        { "Authorization", g_PlatformConf._apiSkey }
-        }
-    );
-
-    // 请求参数
-    auto prompt = CreateJsonRequest(true, g_PlatformConf._modelName, Scintilla::String::GBKToUTF8(question.c_str()));
-
-    std::string resp;
-     // 发送POST请求
-    if (cli.Post(g_PlatformConf._chatEndpoint, prompt, resp, true))
-    {
-        MessageBox(g_nppData._scintillaMainHandle, L"调用大模型失败", L"提示", MB_OK);
-        return;
-    }
-
-    Scintilla::ScintillaCall call;
-    call.SetFnPtr((intptr_t)g_nppData._scintillaMainHandle);
-    
-    // 设置打字机参数，读和写
-    auto fnGet = std::bind(&SimpleHttp::TryFetchResp, &cli, std::placeholders::_1);
-    auto fnSet = [&](const std::string& text) {
-        // 添加文本内容
-        call.AddText(text.size(), text.c_str());
-        // 光标强制可见，自动滚动效果
-        call.ScrollCaret();
-    };
-
-    // 创建并启动打字机
-    Scintilla::Typewriter writer(fnGet, fnSet);
-    fnSet("\r\n\r\n");
-    writer.Run();
-    fnSet("\r\n\r\n");
-}
-
 //----------------------------------------------//
 //-- STEP 4. DEFINE YOUR ASSOCIATED FUNCTIONS --//
 //----------------------------------------------//
+
+void ShowMsgBox(const std::string& info, const std::string& title/* = "提示"*/, UINT nFlag/* = MB_OK*/)
+{
+    MessageBoxA(g_nppData._nppHandle, info.c_str(), title.c_str(), nFlag);
+}
+
 // 参数设置
 void PluginConfig()
 {
@@ -250,7 +198,7 @@ void OptimizeCode()
 // 添加代码注释
 void AddCodeComment()
 {
-
+    g_pAiModel->AddComment(g_pNppImp->GetSelText());
 }
 
 void AskBySelectedText()
@@ -270,15 +218,15 @@ void AskBySelectedText()
     std::thread worker([pText]() {
         try
         {
-            AiRequest(pText.get());
+            // AiRequest(pText.get());
         }
         catch (const std::exception& e)
         {
-            MessageBoxA(NULL, e.what(), "异常", MB_OK);
+            ShowMsgBox(e.what(), "异常");
         }
         catch (...)
         {
-            MessageBoxA(NULL, "未知异常", "异常", MB_OK);
+            ShowMsgBox("未知异常", "异常");
         }
     });
 

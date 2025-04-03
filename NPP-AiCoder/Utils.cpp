@@ -5,6 +5,8 @@
 #include <memory>
 #include "json.hpp"
 
+using namespace Scintilla;
+
 std::string Scintilla::String::ConvEncoding(const char* pSrc, size_t nLen, unsigned int dwScp, unsigned int dwDcp)
 {
     std::string text;
@@ -80,6 +82,24 @@ std::string Scintilla::String::Trim(const std::string& sin, const std::string& c
     return sout;
 }
 
+bool ParseResult::ExtractContent(AiRespType arType, std::string& resp, std::string& content, bool& finished)
+{
+    bool bRet = false;
+
+    switch (arType)
+    {
+    case AiRespType::OPENAI_TOTAL_RESP:
+        bRet = ParseTotalResponse(resp, content);
+        finished = true;
+        break;
+    case AiRespType::OPENAI_STREAM_RESP:
+        bRet = ParseStreamResponse(resp, content, finished);
+        break;
+    default:
+        break;
+    }
+    return bRet;
+}
 
 bool Scintilla::ParseResult::ParseTotalResponse(const std::string& jsonStr, std::string& content)
 {
@@ -157,4 +177,81 @@ bool Scintilla::ParseResult::ParseStreamResponse(std::string& resp, std::string&
         }
     }
     return bRet;
+}
+
+bool File::ReadFile(const std::string& filename, std::string& content)
+{
+    // 以二进制模式打开文件（避免换行符转换）
+    std::ifstream file(filename, std::ios::binary);
+    if (!file.is_open())
+    {
+        return false;
+    }
+
+    // 使用流迭代器读取整个文件内容
+    content.assign(
+        std::istreambuf_iterator<char>(file),
+        std::istreambuf_iterator<char>()
+    );
+
+    // 检查是否成功读取到文件末尾
+    return file.eof();
+}
+
+std::shared_ptr<nlohmann::json> Util::JsonLoadFile(const std::string& path)
+{
+    try
+    {
+        std::shared_ptr<nlohmann::json> pJson(new nlohmann::json());
+        std::ifstream file(path);
+        file >> *pJson;
+        return pJson;
+    }
+    catch (...)
+    {
+
+    }
+    return nullptr;
+}
+
+bool Util::JsonLoad(const std::string& sdat, nlohmann::json& jdat)
+{
+    try
+    {
+        jdat = nlohmann::json::parse(sdat);
+        return true;
+    }
+    catch(...)
+    {
+
+    }
+    return false;
+}
+
+void Typewriter::Run()
+{
+    ParseResult pr;
+    std::string text;
+    std::string last;
+    std::string content;
+    bool finished = false;
+    for (int nRet = 0; (nRet = m_getter(text)) != 0; )
+    {
+        if (text.empty())
+        {
+            continue;
+        }
+        text = last + text;
+        last = "";
+        while (!text.empty() && !finished)
+        {
+            if (!pr.ExtractContent(AiRespType::OPENAI_STREAM_RESP, text, content, finished))
+            {
+                last = text;
+                break;
+            }
+            m_writer(content);
+            Sleep(50);
+        }
+    }
 }

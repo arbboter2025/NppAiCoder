@@ -105,9 +105,6 @@
     <ClInclude Include="include\notepad++\DockWnd\dockingResource.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="include\notepad++\DockWnd\NppDarkMode.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="include\notepad++\DockWnd\StaticDialog.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -115,6 +112,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="include\notepad++\DockWnd\dpiManagerV2.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="include\notepad++\DockWnd\NppDarkMode.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
