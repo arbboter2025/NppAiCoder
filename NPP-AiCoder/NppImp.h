@@ -11,9 +11,14 @@
 class NppImp
 {
 public:
+    using FnRunUiTask = std::function<void(const std::string&)>;
+
     NppImp(NppData& npp) : _npp(npp) {}
     std::shared_ptr<Scintilla::ScintillaCall> SciCall();
-    std::string GetSelText();
+    
+    void RunUiTask(FnRunUiTask fnTask, const std::string& text);
+    void NewLineAfterSelText();
+    std::string GetSelText(bool bNewLine = false);
 private:
     NppData _npp;
 };

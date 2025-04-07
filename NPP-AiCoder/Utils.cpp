@@ -142,10 +142,12 @@ bool Scintilla::ParseResult::ParseStreamResponse(std::string& resp, std::string&
     {
         finished = false;
         content = "";
-        // 去除"data: "前缀（假设数据格式为"data: {...}"）
-        if (chunk.rfind("data: ", 0) == 0)
+        // 去除"data: "前缀
+        const std::string prefix = "data: ";
+        size_t pi = chunk.find(prefix);
+        if (pi != std::string::npos)
         {
-            chunk = chunk.substr(6);
+            chunk = chunk.substr(pi + prefix.size());
         }
 
         auto j = nlohmann::json::parse(chunk);
@@ -165,7 +167,6 @@ bool Scintilla::ParseResult::ParseStreamResponse(std::string& resp, std::string&
                     break;
                 }
             }
-
         }
         bRet = true;
     }
@@ -249,6 +250,10 @@ void Typewriter::Run()
             {
                 last = text;
                 break;
+            }
+            if (content.empty())
+            {
+                continue;
             }
             m_writer(content);
             Sleep(50);

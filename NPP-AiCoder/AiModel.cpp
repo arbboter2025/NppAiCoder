@@ -4,6 +4,7 @@
 #include "Utils.h"
 #include "json.hpp"
 #include "NppImp.h"
+#include "PluginDefinition.h"
 
 using namespace Scintilla;
 

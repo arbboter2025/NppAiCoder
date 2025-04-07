@@ -49,8 +49,6 @@ public:
             jdat = jdat[k];
         }
     }
-
-
 };
 
 class Json

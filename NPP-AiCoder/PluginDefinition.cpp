@@ -186,50 +186,22 @@ void OpenAiAssistWnd()
 // 解读代码
 void ReadCode()
 {
-
+    g_pNppImp->RunUiTask(std::bind(&AiModel::ReadCode, g_pAiModel, std::placeholders::_1), g_pNppImp->GetSelText(true));
 }
 
 // 代码优化
 void OptimizeCode()
 {
-
+    g_pNppImp->RunUiTask(std::bind(&AiModel::OptimizeCode, g_pAiModel, std::placeholders::_1), g_pNppImp->GetSelText(true));
 }
 
 // 添加代码注释
 void AddCodeComment()
 {
-    g_pAiModel->AddComment(g_pNppImp->GetSelText());
+    g_pNppImp->RunUiTask(std::bind(&AiModel::AddComment, g_pAiModel, std::placeholders::_1), g_pNppImp->GetSelText(true));
 }
 
 void AskBySelectedText()
 {
-    NppImp npp(g_nppData);
-    auto text = npp.GetSelText();
-
-    // 设置输出位置，选中部分尾部新建一行
-    auto pCall = npp.SciCall();
-    auto pEnd = pCall->SelectionEnd();
-    pCall->ClearSelections();
-    pCall->GotoPos(pEnd + 1);
-
-    // 创建并启动子线程
-    std::shared_ptr<char[]> pText(new char[text.size()]);
-    memcpy(pText.get(), text.c_str(), text.size());
-    std::thread worker([pText]() {
-        try
-        {
-            // AiRequest(pText.get());
-        }
-        catch (const std::exception& e)
-        {
-            ShowMsgBox(e.what(), "异常");
-        }
-        catch (...)
-        {
-            ShowMsgBox("未知异常", "异常");
-        }
-    });
-
-    // 分离子线程，避免主线程阻塞
-    worker.detach();
+    g_pNppImp->RunUiTask(std::bind(&AiModel::DirectRequest, g_pAiModel, std::placeholders::_1), g_pNppImp->GetSelText(true));
 }
