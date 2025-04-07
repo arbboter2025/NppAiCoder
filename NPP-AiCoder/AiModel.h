@@ -35,10 +35,10 @@ public:
     }
 
     // 直接提问
-    void DirectRequest(const std::string& request)
+    void DirectRequest(const std::string& content)
     {
-        ExecuteAiTask(request,
-            "",  // 无附加内容
+        ExecuteAiTask("",
+            content,  // 无附加内容
             _conf.Platform().chat_endpoint);
     }
 
