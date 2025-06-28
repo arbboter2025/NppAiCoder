@@ -162,7 +162,7 @@ AiCoder是一款为Notepad++设计的轻量级AI辅助插件，提供以下核�
 - **反馈意见或问题**：留言或发送邮件至 support@aicoder.com，[![arbboter@hotmail.com](https://img.shields.io/badge/contact-aicoder_support%40example.com-blue)](mailto:arbboter@hotmail.com)
 
 联系我：
-![WeChat](https://i-blog.csdnimg.cn/direct/5a72844fcf7245cf84b8816f63337989.jpeg)
+![WeChat](doc/MyWeChat.jpg)
 
 版本更新记录：  
 `v1.0.0` - 2025.04 初版发布
