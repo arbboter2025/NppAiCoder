@@ -1,6 +1,16 @@
 // Microsoft Visual C++ generated resource script.
 //
 #include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include <winres.h>
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
 /////////////////////////////////////////////////////////////////////////////
 // 中文(简体，中国) resources
 
@@ -14,7 +24,7 @@ LANGUAGE LANG_CHINESE, SUBLANG_CHINESE_SIMPLIFIED
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,2025,3,28
+ FILEVERSION 1,2025,4,25
  PRODUCTVERSION 1,0,0,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
@@ -30,11 +40,11 @@ BEGIN
     BEGIN
         BLOCK "040904b0"
         BEGIN
-            VALUE "CompanyName", "Arbboter"
+            VALUE "CompanyName", "linwu2@cmschina.com.cn"
             VALUE "FileDescription", "Ai Plugin for Notepad++"
-            VALUE "FileVersion", "1.2025.3.28"
+            VALUE "FileVersion", "1.2025.4.25"
             VALUE "InternalName", "NPPAiCoder"
-            VALUE "LegalCopyright", "Copyright 2025 by Arbboter"
+            VALUE "LegalCopyright", "Copyright 2025 by linwu2@cmschina.com.cn"
             VALUE "OriginalFilename", "NPPAiCoder.dll"
             VALUE "ProductName", "NPPAiCoder"
             VALUE "ProductVersion", "1.0.0.0"
@@ -60,7 +70,7 @@ END
 
 2 TEXTINCLUDE 
 BEGIN
-    "\0"
+    "#include <winres.h>\0"
 END
 
 3 TEXTINCLUDE 
@@ -70,6 +80,145 @@ BEGIN
 END
 
 #endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_DIALOG_AI_ASSIST DIALOGEX 0, 0, 300, 176
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+END
+
+IDD_DIALOG_PLUG_CONFIG DIALOGEX 0, 0, 389, 307
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "AiCoder配置"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    GROUPBOX        "插件配置",IDC_STATIC,7,10,375,108
+    LTEXT           "提示词模板:",IDC_STATIC,14,23,44,8
+    COMBOBOX        IDC_COMBO_PROMT,66,21,92,114,CBS_DROPDOWN | CBS_AUTOHSCROLL | WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON      "保存",IDC_BUTTON_PROMT_SAVE,159,20,20,14
+    PUSHBUTTON      "删除",IDC_BUTTON_PROMT_DEL,179,20,20,14
+    LTEXT           "超时时间:",IDC_STATIC,206,23,36,8
+    EDITTEXT        IDC_EDIT_TIMEOUT,244,21,54,14,ES_AUTOHSCROLL
+    CONTROL         "",IDC_RICHEDIT_PROMT,"RichEdit20W",ES_MULTILINE | ES_AUTOVSCROLL | ES_AUTOHSCROLL | WS_BORDER | WS_TABSTOP,9,41,370,72
+    GROUPBOX        "AI平台配置",IDC_STATIC,7,123,375,164
+    LTEXT           "当前平台名称:",IDC_STATIC,9,135,52,8
+    COMBOBOX        IDC_COMBO_PLATFORM,66,132,92,114,CBS_DROPDOWN | CBS_AUTOHSCROLL | WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON      "保存",IDC_BUTTON_PLATFORM_SAVE,159,131,20,14
+    PUSHBUTTON      "删除",IDC_BUTTON_PLATFORM_DEL,179,131,20,14
+    LTEXT           "认证类型:",IDC_STATIC,25,152,36,8
+    COMBOBOX        IDC_COMBO_AUTH_TYPE,66,150,133,114,CBS_DROPDOWN | CBS_AUTOHSCROLL | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "认证数据:",IDC_STATIC,206,152,36,8
+    LTEXT           "模型名称:",IDC_STATIC,206,169,36,8
+    COMBOBOX        IDC_COMBO_MODEL_NAME,244,168,92,114,CBS_DROPDOWN | CBS_AUTOHSCROLL | WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON      "保存",IDC_BUTTON_MODEL_SAVE,338,167,20,14
+    PUSHBUTTON      "删除",IDC_BUTTON_MODEL_DEL,358,167,20,14
+    LTEXT           "平台根地址:",IDC_STATIC,17,169,44,8
+    EDITTEXT        IDC_EDIT_ROOT_URL,66,167,133,14,ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "保存",IDOK,216,286,50,14
+    PUSHBUTTON      "取消",IDCANCEL,273,286,50,14
+    EDITTEXT        IDC_EDIT_AUTH_DATA,244,150,133,14,ES_AUTOHSCROLL
+    CONTROL         "启用SSL",IDC_CHECK_SSL,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,206,135,43,10
+    CONTROL         "",IDC_LIST_ENDPOINT,"SysListView32",LVS_ALIGNLEFT | WS_BORDER | WS_TABSTOP,9,184,370,100
+    PUSHBUTTON      "关闭",ID_CLOSE,329,286,50,14
+END
+
+IDD_DIALOG_EDIT_FIELD DIALOGEX 0, 0, 309, 176
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Dialog"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "确定",IDOK,198,155,50,14
+    PUSHBUTTON      "取消",IDCANCEL,252,155,50,14
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO
+BEGIN
+    IDD_DIALOG_AI_ASSIST, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 169
+    END
+
+    IDD_DIALOG_PLUG_CONFIG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 382
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 300
+    END
+
+    IDD_DIALOG_EDIT_FIELD, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 302
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 169
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// AFX_DIALOG_LAYOUT
+//
+
+IDD_DIALOG_AI_ASSIST AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+IDD_DIALOG_PLUG_CONFIG AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+IDD_DIALOG_EDIT_FIELD AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDI_ICON_SEND           ICON                    "resources\\send.ico"
+
+IDI_ICON_STOP           ICON                    "resources\\stop.ico"
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+IDR_MENU_CONFIG MENU
+BEGIN
+    POPUP "接口配置"
+    BEGIN
+        MENUITEM "修改",                          ID_CONF_ENDPOINT_MODIFY
+        MENUITEM "新增",                          ID_CONF_ENDPOINT_CREATE
+        MENUITEM "删除",                          ID_CONF_ENDPOINT_DELETE
+    END
+END
 
 #endif    // 中文(简体，中国) resources
 /////////////////////////////////////////////////////////////////////////////
