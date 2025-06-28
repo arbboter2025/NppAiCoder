@@ -1,7 +1,29 @@
 {
-    "base_url": "cloud.infini-ai.com",
-    "api_key": "Bearer sk-XXXXXX",
-    "model_name": "deepseek-r1-distill-qwen-32b",
-    "generate_endpoint": "/maas/v1/completions",
-    "chat_endpoint": "/maas/v1/chat/completions"
+    "platform": "INFINI-AI",
+    "timeout": 90,
+    "platforms": {
+        "INFINI-AI": {
+            "enable_ssl": true,
+            "base_url": "cloud.infini-ai.com",
+            "authorization": {
+                "type": "Bearer",
+                "data": "sk-**"
+            },
+            "model_name": "deepseek-r1-distill-qwen-32b",
+            "models": [ "deepseek-r1-distill-qwen-32b", "deepseek-r1", "deepseek-v3" ],
+            "generate_endpoint": {
+                "method": "post",
+                "api": "/maas/v1/completions",
+                "prompt": ""
+            },
+            "chat_endpoint": {
+                "method": "post",
+                "api": "/maas/v1/chat/completions",
+                "prompt": ""
+            },
+            "models_endpoint": {
+
+            }
+        }
+    }
 }
