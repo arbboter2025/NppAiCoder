@@ -36,7 +36,7 @@ const TCHAR NPP_PLUGIN_NAME[] = TEXT("AiCoder");
 //
 // Here define the number of your plugin commands
 //
-const int nbFunc = 2;
+const int nbFunc = 8;
 
 
 //
@@ -70,7 +70,22 @@ bool setCommand(size_t index, const TCHAR *cmdName, PFUNCPLUGINCMD pFunc, Shortc
 //
 // Your plugin command functions
 //
-void HelloAiCoder();
+//
+// 参数设置
+void PluginConfig();
+// 打开Ai助手窗口
+void OpenAiAssistWnd();
+// 解读代码
+void ReadCode();
+// 代码优化
+void OptimizeCode();
+// 添加代码注释
+void AddCodeComment();
+// 代码格式化
+void FormatCode();
+// 选中即问
 void AskBySelectedText();
+// 取消任务
+void CancalTask();
 
 #endif //PLUGINDEFINITION_H

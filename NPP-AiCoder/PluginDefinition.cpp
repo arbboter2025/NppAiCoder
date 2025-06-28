@@ -18,15 +18,17 @@
 #include "PluginDefinition.h"
 #include "menuCmdID.h"
 
-#include "ScintillaTypes.h"
-#include "ScintillaStructures.h"
-#include "ScintillaMessages.h"
-#include "ScintillaCall.h"
-#include "Utils.h"
-
 #include "SimpleHttp.h"
 #include "json.hpp"
 #include "PluginConf.h"
+#include "AiAssistWnd.h"
+#include "NppImp.h"
+#include "AiModel.h"
+#include "PluginConfigDlg.h"
+#include "Exui.h"
+#include "Utils.h"
+#include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
 
 #include <shlwapi.h>
 #include <string>
@@ -46,8 +48,64 @@ FuncItem funcItem[nbFunc];
 //
 // The data of Notepad++ that you can use in your plugin commands
 //
-NppData nppData;
-Scintilla::PlatformConf g_PlatformConf;
+HMODULE g_hModule = nullptr;
+NppData g_nppData;
+static PluginConfigDlg* g_pConfigDlg = nullptr;
+Scintilla::PluginConfig g_pluginConf;
+AiAssistWnd* g_pAiWnd = nullptr;
+AiModel* g_pAiModel = nullptr;
+NppImp* g_pNppImp = nullptr;
+ShortcutKey* g_pShortcutKeys = nullptr;
+std::atomic<bool> g_bRun = false;
+
+std::string GetAppDataPath() 
+{
+    // 获取所需缓冲区大小
+    DWORD bufferSize = GetEnvironmentVariableA("APPDATA", nullptr, 0);
+    if (bufferSize == 0) 
+    {
+        return "";
+    }
+
+    // 分配缓冲区并获取路径
+    std::string appDataPath;
+    appDataPath.resize(bufferSize);
+    if (GetEnvironmentVariableA("APPDATA", appDataPath.data(), bufferSize) == 0)
+    {
+        return "";
+    }
+
+    // 移除末尾的终止符（如果有）
+    appDataPath.resize(bufferSize - 1);
+    return appDataPath;
+}
+
+void InitLogger()
+{
+    // 创建文件日志器
+    auto log_file = GetAppDataPath() + "\\NppPlugin\\AiCoder\\logs\\AiCoder_" + Scintilla::Util::GetCurrentDate("%Y%m%d") + ".log";
+    if (!Scintilla::Util::Mkdir(log_file))
+    {
+        return;
+    }
+    auto file_logger = spdlog::basic_logger_mt("file_logger", log_file);
+
+    // 创建控制台日志器
+    auto console_logger = spdlog::stdout_color_mt("console");
+
+    // 设置全局日志器
+    spdlog::set_default_logger(file_logger);
+
+    // 设置日志格式
+    spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] %v");
+
+    // 设置日志级别
+    spdlog::set_level(spdlog::level::debug);
+
+    // 自动保存到文件
+    spdlog::flush_every(std::chrono::seconds(5));
+}
+
 //
 // Initialize your plugin data here
 // It will be called while plugin loading   
@@ -55,6 +113,7 @@ void pluginInit(HANDLE hModule)
 {
     if (hModule != NULL)
     {
+        g_hModule = (HMODULE)hModule;
         char szModulePath[MAX_PATH] = { 0 };
         ::GetModuleFileNameA((HMODULE)hModule, szModulePath, CARRAY_LEN(szModulePath));
 
@@ -66,10 +125,9 @@ void pluginInit(HANDLE hModule)
         strConfigFile += "\\config.json";
 
         // 读取配置
-        std::string strConf;
-        Scintilla::File::ReadFile(strConfigFile, strConf);
-        g_PlatformConf.Load(strConf);
+        g_pluginConf.Load(strConfigFile);
     }
+    InitLogger();
 }
 
 //
@@ -77,6 +135,16 @@ void pluginInit(HANDLE hModule)
 //
 void pluginCleanUp()
 {
+    if (g_pAiModel) { delete g_pAiModel; g_pAiModel = nullptr; }
+    if (g_pAiWnd) { delete g_pAiWnd; g_pAiWnd = nullptr; }
+    if (g_pNppImp) { delete g_pNppImp; g_pNppImp = nullptr; }
+    if (g_pShortcutKeys) { delete[] g_pShortcutKeys; g_pShortcutKeys = nullptr; }
+}
+
+BOOL InitRichEdit2()
+{
+    static HMODULE hRichEdit = LoadLibrary(TEXT("riched20.dll"));
+    return hRichEdit != nullptr;
 }
 
 //
@@ -96,20 +164,32 @@ void commandMenuInit()
     //            bool check0nInit                // optional. Make this menu item be checked visually
     //            );
 
-    // 初始化快捷键
-    auto pShortcutKeys = new ShortcutKey[nbFunc];
-    memset(pShortcutKeys, 0, sizeof(ShortcutKey) * nbFunc);
-    ShortcutKey& key = pShortcutKeys[0];
+    // 初始化数据
+    g_pNppImp = new NppImp(g_nppData);
+    g_pAiModel = new AiModel(g_pluginConf, g_nppData);
 
+    // 初始化菜单
+    ShortcutKey* pSck = new ShortcutKey[nbFunc];
+    g_pShortcutKeys = pSck;
+    size_t nCid = 0;
+    pSck[nCid] = { false, true, false, 'B' };
+    setCommand(nCid, L"参数配置", PluginConfig, pSck + nCid, false); ++nCid;
+    pSck[nCid] = { false, true, false, 'K' };
+    setCommand(nCid, L"显示窗口", OpenAiAssistWnd, pSck + nCid, false); ++nCid;
+    pSck[nCid] = { false, true, false, 'J' };
+    setCommand(nCid, L"解读代码", ReadCode, pSck + nCid, false); ++nCid;
+    pSck[nCid] = { false, true, false, 'Y' };
+    setCommand(nCid, L"优化代码", OptimizeCode, pSck + nCid, false); ++nCid;
+    pSck[nCid] = { false, true, false, 'Z' };
+    setCommand(nCid, L"代码注释", AddCodeComment, pSck + nCid, false); ++nCid;
+    pSck[nCid] = { false, true, false, 'G' };
+    setCommand(nCid, L"规范代码", FormatCode, pSck + nCid, false); ++nCid;
+    pSck[nCid] = { false, true, false, 'A' };
+    setCommand(nCid, L"选中即问", AskBySelectedText, pSck + nCid, false); ++nCid;
+    pSck[nCid] = { true, true, false, 'C' };
+    setCommand(nCid, L"取消任务", CancalTask, pSck + nCid, false); ++nCid;
 
-    setCommand(0, L"About AiCoder", HelloAiCoder, NULL, false);
-
-    key = pShortcutKeys[1];
-    key._isCtrl = true;
-    key._isAlt = true;
-    key._isShift = false;
-    key._key = VK_F2;
-    setCommand(1, L"选中内容问AI", AskBySelectedText, &key, false);
+    InitRichEdit2();
 }
 
 //
@@ -141,110 +221,107 @@ bool setCommand(size_t index, const TCHAR *cmdName, PFUNCPLUGINCMD pFunc, Shortc
 }
 
 
-std::string CreateJsonRequest(bool stream, const std::string& model, const std::string& content) 
-{
-    nlohmann::json req;
-    req["stream"] = stream;
-    req["model"] = model;
-
-    // 构建消息体（自动处理特殊字符转义）[[4]]
-    req["messages"] = nlohmann::json::array({
-        {
-            {"role", "user"},
-            {"content", content}
-        }
-        });
-    return req.dump(-1, ' ', false, nlohmann::json::error_handler_t::replace);
-}
-
-void AiRequest(const std::string& question)
-{
-    // 创建HTTPS客户端
-    SimpleHttp cli(g_PlatformConf._baseUrl, true);
-
-
-    // 设置默认头，字符编码使用UTF-8
-    cli.SetHeaders({
-        { "Content-Type", "application/json; charset=UTF-8" },
-        { "Authorization", g_PlatformConf._apiSkey }
-        }
-    );
-
-    // 请求参数
-    auto prompt = CreateJsonRequest(true, g_PlatformConf._modelName, Scintilla::String::GBKToUTF8(question.c_str()));
-
-    std::string resp;
-     // 发送POST请求
-    if (cli.Post(g_PlatformConf._chatEndpoint, prompt, resp, true))
-    {
-        MessageBox(nppData._scintillaMainHandle, L"调用大模型失败", L"提示", MB_OK);
-        return;
-    }
-
-    Scintilla::ScintillaCall call;
-    call.SetFnPtr((intptr_t)nppData._scintillaMainHandle);
-    
-    // 设置打字机参数，读和写
-    auto fnGet = std::bind(&SimpleHttp::TryFetchResp, &cli, std::placeholders::_1);
-    auto fnSet = [&](const std::string& text) {
-        // 添加文本内容
-        call.AddText(text.size(), text.c_str());
-        // 光标强制可见，自动滚动效果
-        call.ScrollCaret();
-    };
-
-    // 创建并启动打字机
-    Scintilla::Typewriter writer(fnGet, fnSet);
-    fnSet("\r\n\r\n");
-    writer.Run();
-    fnSet("\r\n\r\n");
-}
-
 //----------------------------------------------//
 //-- STEP 4. DEFINE YOUR ASSOCIATED FUNCTIONS --//
 //----------------------------------------------//
-void HelloAiCoder()
-{
 
+int ShowMsgBox(const std::string& info, const std::string& title/* = "提示"*/, UINT nFlag/* = MB_OK*/)
+{
+    return MessageBoxA(g_nppData._nppHandle, info.c_str(), title.c_str(), nFlag);
 }
 
+// 参数设置
+void PluginConfig()
+{
+    if (g_pConfigDlg == nullptr || !IsWindow(g_pConfigDlg->GetHandle()))
+    {
+        delete g_pConfigDlg;
+        g_pConfigDlg = new PluginConfigDlg((HINSTANCE)g_hModule, g_pluginConf);
+    }
+    if (g_pAiWnd && g_pAiWnd->isVisible())
+    {
+        g_pConfigDlg->fnOnConfigChange = std::bind(&AiAssistWnd::ReloadConfig, g_pAiWnd);
+    }
+    else
+    {
+        g_pConfigDlg->fnOnConfigChange = nullptr;
+    }
+    g_pConfigDlg->Show();
+}
 
+// 打开Ai助手窗口
+void OpenAiAssistWnd()
+{
+    // 初始化Dock窗口
+    if (g_pAiWnd == nullptr && g_hModule != nullptr && g_nppData._nppHandle != nullptr)
+    {
+        g_pAiWnd = new AiAssistWnd((HINSTANCE)g_hModule, g_nppData, g_pluginConf);
+        g_pAiWnd->init();
+        auto& platform = g_pluginConf.Platform();
+        auto it = std::find(platform.models.begin(), platform.models.end(), platform.model_name);
+        g_pAiWnd->fnOnModelSelChange = [](const std::string& model) {
+            g_pluginConf.platforms[g_pluginConf.platform].model_name = model;
+        };
+        g_pAiWnd->fnOnInputFinished = [](const std::string& text) {
+            g_pAiModel->fnAppentOutput = [](const std::string& ans) {
+                g_pAiWnd->appendAnswer(Scintilla::String::UTF8ToGBK(ans.c_str(), ans.size()), false); 
+            };
+            g_pAiModel->fnOutputFinished = std::bind(&AiAssistWnd::OnOutputFinished, g_pAiWnd, std::placeholders::_1);
+            g_pAiWnd->appendAnswer("【答】");
+            g_pNppImp->RunAiRequest(std::bind(&AiModel::Request, g_pAiModel, std::placeholders::_1, std::placeholders::_2),
+                "",
+                text);
+        };
+        g_pAiModel->fnSetStatus = std::bind(&AiAssistWnd::SetTaskStatus, g_pAiWnd, std::placeholders::_1);
+    }
+    if (g_pAiWnd)
+    {
+        g_pAiWnd->display(true);
+    }
+}
 
+// 解读代码
+void ReadCode()
+{
+    g_pNppImp->RunAiRequest(std::bind(&AiModel::Request, g_pAiModel, std::placeholders::_1, std::placeholders::_2),
+        "read_code",
+        g_pNppImp->GetSelText(true, true));
+}
+
+// 代码优化
+void OptimizeCode()
+{
+    g_pNppImp->RunAiRequest(std::bind(&AiModel::Request, g_pAiModel, std::placeholders::_1, std::placeholders::_2),
+        "optimize_code",
+        g_pNppImp->GetSelText(true, true));
+}
+
+// 添加代码注释
+void AddCodeComment()
+{
+    g_pNppImp->RunAiRequest(std::bind(&AiModel::Request, g_pAiModel, std::placeholders::_1, std::placeholders::_2),
+        "add_comment",
+        g_pNppImp->GetSelText(true, true));
+}
+
+// 规范代码
+void FormatCode()
+{
+    g_pNppImp->RunAiRequest(std::bind(&AiModel::Request, g_pAiModel, std::placeholders::_1, std::placeholders::_2),
+        "format_code",
+        g_pNppImp->GetSelText(true, true));
+}
+
+// 直接提问
 void AskBySelectedText()
 {
-    // 获取当前文本内容
-    Scintilla::ScintillaCall call;
-    call.SetFnPtr((intptr_t)nppData._scintillaMainHandle);
-    auto text = call.GetSelText();
-    auto code_page = call.CodePage();
-    if (code_page > 0 && code_page != CP_ACP)
-    {
-        text = Scintilla::String::ConvEncoding(text.c_str(), text.size(), code_page, CP_ACP);
-    }
+    g_pNppImp->RunAiRequest(std::bind(&AiModel::Request, g_pAiModel, std::placeholders::_1, std::placeholders::_2),
+        "",
+        g_pNppImp->GetSelText(true, true));
+}
 
-    // 设置输出位置，选中部分尾部新建一行
-    auto pEnd = call.SelectionEnd();
-    call.ClearSelections();
-    call.GotoPos(pEnd + 1);
-
-    // 创建并启动子线程
-    std::shared_ptr<char[]> pText(new char[text.size()]);
-    memcpy(pText.get(), text.c_str(), text.size());
-    std::thread worker([pText]() {
-        try
-        {
-            AiRequest(pText.get());
-        }
-        catch (const std::exception& e)
-        {
-            MessageBoxA(NULL, e.what(), "异常", MB_OK);
-        }
-        catch (...)
-        {
-            MessageBoxA(NULL, "未知异常", "异常", MB_OK);
-        }
-    });
-
-    // 分离子线程，避免主线程阻塞
-    worker.detach();
+void CancalTask()
+{
+    g_bRun = false;
+    spdlog::info("用户主动取消任务");
 }

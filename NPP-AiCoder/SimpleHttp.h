@@ -1,4 +1,5 @@
 #pragma once
+#include "Utils.h"
 #include <windows.h>
 #include <winhttp.h>
 #include <iostream>
@@ -12,7 +13,6 @@
 #include <strsafe.h>
 
 #pragma comment(lib, "winhttp.lib")
-
 
 /// <summary>
 /// 简单的HTTP类，自动支持http和https请求
@@ -109,6 +109,7 @@ protected:
     /// <param name="dat"></param>
     void Push(const std::string& dat)
     {
+#ifdef _DEBUG
         FILE* fp = nullptr;
         fopen_s(&fp, "D:\\resp.dat", "ab+");
         if (fp != nullptr)
@@ -117,6 +118,7 @@ protected:
             fwrite("\n#\n", 3, 1, fp);
             fclose(fp);
         }
+#endif
         std::lock_guard<std::mutex> guard(_mtxDatas);
         if (!dat.empty()) _datas.push_back(dat);
     }
@@ -135,7 +137,7 @@ private:
         {
             // 创建连接
             hConnect = WinHttpConnect(_hSession,
-                string2w(_strBaseUrl).c_str(),
+                Scintilla::String::string2w(_strBaseUrl).c_str(),
                 INTERNET_DEFAULT_PORT,
                 0);
             if (!hConnect) throw std::runtime_error("Connection failed");
@@ -143,7 +145,7 @@ private:
             // 创建请求
             hRequest = WinHttpOpenRequest(hConnect,
                 method.c_str(),
-                string2w(upath).c_str(),
+                Scintilla::String::string2w(upath).c_str(),
                 nullptr,
                 WINHTTP_NO_REFERER,
                 WINHTTP_DEFAULT_ACCEPT_TYPES,
@@ -243,7 +245,7 @@ private:
 
         try
         {
-            while (_streamActive)
+            while (_streamActive || g_bRun.load())
             {
                 dwSize = 0;
                 if (!WinHttpQueryDataAvailable(hRequest, &dwSize) || dwSize == 0) break;
@@ -282,33 +284,15 @@ private:
         // 创建请求后立即设置请求头
         for (const auto& h : _headers)
         {
-            std::wstring header = string2w(h.first + ": " + h.second);
+            std::wstring header = Scintilla::String::string2w(h.first + ": " + h.second);
             if (!WinHttpAddRequestHeaders(hRequest,
                 header.c_str(),
                 static_cast<DWORD>(header.length()),
                 WINHTTP_ADDREQ_FLAG_COALESCE))
             {
-                //throw std::runtime_error("Failed to set header: " + h.first + " [Error: " + std::to_string(GetLastError()) + "]");
+                throw std::runtime_error("Failed to set header: " + h.first + " [Error: " + std::to_string(GetLastError()) + "]");
             }
         }
-    }
-
-    // std::wstring → std::string (UTF-8)
-    std::string wstring2s(const std::wstring& wstr) {
-        if (wstr.empty()) return {};
-        int len = WideCharToMultiByte(CP_UTF8, 0, wstr.data(), (int)wstr.size(), nullptr, 0, nullptr, nullptr);
-        std::string result(len, '\0');
-        WideCharToMultiByte(CP_UTF8, 0, wstr.data(), (int)wstr.size(), (LPSTR)result.data(), len, nullptr, nullptr);
-        return result;
-    }
-
-    // std::string (UTF-8) → std::wstring
-    std::wstring string2w(const std::string& str) {
-        if (str.empty()) return {};
-        int len = MultiByteToWideChar(CP_UTF8, 0, str.data(), (int)str.size(), nullptr, 0);
-        std::wstring result(len, L'\0');
-        MultiByteToWideChar(CP_UTF8, 0, str.data(), (int)str.size(), (LPWSTR)result.data(), len);
-        return result;
     }
 
 private:
@@ -329,66 +313,3 @@ private:
     std::atomic<bool> _streamActive{ false };
     std::thread _worker;
 };
-
-
-std::string ReplaceAll(std::string str, const std::string& from, const std::string& to) {
-    if (from.empty()) return str; // 避免死循环[[2]]
-
-    size_t pos = 0;
-    while ((pos = str.find(from, pos)) != std::string::npos)
-    {
-        str.replace(pos, from.length(), to);
-        pos += to.length();
-    }
-    return str;
-}
-
-std::string ExtractContent(std::string& resp) {
-    std::vector<std::string> results;
-    std::string key = "\"content\":";
-    size_t pos = 0;
-
-    while ((pos = resp.find(key, pos)) != std::string::npos)
-    {
-        pos += key.length();
-        // 跳过空白和冒号
-        while (pos < resp.size() && (resp[pos] == ' ' || resp[pos] == ':')) pos++;
-
-        if (resp[pos] != '"') continue; // 非字符串值跳过
-
-        std::string content;
-
-        // 处理转义字符和双引号
-        while (pos < resp.size())
-        {
-            char c = resp[pos++];
-            if (c == '"') break;
-            else if (c == '\\' && pos < resp.size())
-            {
-                switch (resp[pos++])
-                {
-                case 'n':
-                    c = '\n';
-                    break;
-                case '\r':
-                    c = '\r';
-                    break;
-                case '\\':
-                    c = '\\';
-                    break;
-                case '"':
-                    c = '\"';
-                    break;
-                default:
-                    pos--;
-                    break;
-                }
-            }
-            content += c;
-        }
-        resp = resp.substr(pos);
-        return content;
-    }
-    resp = "";
-    return resp;
-}

@@ -9,7 +9,32 @@
 
 // 添加要在此处预编译的标头
 #include "framework.h"
+#include <string>
+#include <atomic>
+#include <spdlog/spdlog.h>
+
 #define NAMEPACE_BEG(x) namespace x {
 #define NAMEPACE_END }
+
+#define CHECK_OR_RETURN(A, ...) \
+            do { \
+                if (!(A)) { \
+                    return (##__VA_ARGS__); \
+                } \
+            } while (0)
+#define IDC_MENU_CONFIG_ENDPOINT 0
+#define TASK_STATUS_BEGIN    0
+#define TASK_STATUS_FINISH   1
+
+extern std::atomic<bool> g_bRun;
+extern HMODULE g_hModule;
+
+enum class AiRespType
+{
+    OPENAI_TOTAL_RESP,
+    OPENAI_STREAM_RESP,
+};
+
+int ShowMsgBox(const std::string& info, const std::string& title = "提示", UINT nFlag = MB_OK);
 
 #endif //PCH_H

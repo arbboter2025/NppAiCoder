@@ -18,7 +18,7 @@
 #include "PluginDefinition.h"
 
 extern FuncItem funcItem[nbFunc];
-extern NppData nppData;
+extern NppData g_nppData;
 
 
 BOOL APIENTRY DllMain(HANDLE hModule, DWORD  reasonForCall, LPVOID /*lpReserved*/)
@@ -50,7 +50,7 @@ BOOL APIENTRY DllMain(HANDLE hModule, DWORD  reasonForCall, LPVOID /*lpReserved*
 
 extern "C" __declspec(dllexport) void setInfo(NppData notpadPlusData)
 {
-	nppData = notpadPlusData;
+	g_nppData = notpadPlusData;
 	commandMenuInit();
 }
 
